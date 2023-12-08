@@ -1,53 +1,51 @@
 use std::sync::Arc;
 
-use rustpush::{register, APNSConnection, APNSState, IDSAppleUser, IDSUser, PushError};
-use serde::{Deserialize, Serialize};
+use rustpush::{register, APNSConnection, IDSAppleUser, IDSUser, PushError};
+use tauri::InvokeError;
 
 use crate::emulated::bindings::{generate_validation_data, ValidationDataError};
 
-#[derive(Serialize, Deserialize, Clone)]
-struct SavedState {
-    push: APNSState,
-    users: Vec<IDSUser>,
+pub enum LoginError {
+    PushError(PushError),
+}
+
+impl From<PushError> for LoginError {
+    fn from(e: PushError) -> Self {
+        LoginError::PushError(e)
+    }
+}
+
+impl Into<InvokeError> for LoginError {
+    fn into(self) -> InvokeError {
+        match self {
+            LoginError::PushError(e) => InvokeError::from(e.to_string()),
+        }
+    }
 }
 
 /**
- * Start logging in a new user given a username and password
+ * Login to Apple with a username and password
  *
- * If the user does not have 2FA enabled, this will return a new user, otherwise it will return a TwoFaError
+ * If the user has 2FA enabled, this will return a TwoFaError if no 2FA code is provided
  */
-pub async fn login_1fa(
+pub async fn login(
     connection: Arc<APNSConnection>,
     username: &str,
     password: &str,
-) -> Result<IDSUser, PushError> {
-    IDSAppleUser::authenticate(
-        connection.clone(),
-        username.trim(),
-        &(password.trim().to_string()),
-    )
-    .await
+    two_factor_code: Option<&str>,
+) -> Result<IDSUser, LoginError> {
+    let password_plus_2fa = match two_factor_code {
+        Some(code) => password.trim().to_string() + &code.trim(),
+        None => password.trim().to_string(),
+    };
+    match IDSAppleUser::authenticate(connection.clone(), username.trim(), &password_plus_2fa).await
+    {
+        Ok(user) => Ok(user),
+        Err(e) => Err(LoginError::PushError(e)),
+    }
 }
 
-/**
- * Finish logging in a new user given a username, password, and validation code
- *
- * This will return a new user
- */
-pub async fn login_2fa(
-    connection: Arc<APNSConnection>,
-    username: &str,
-    password: &str,
-    validation: &str,
-) -> Result<IDSUser, PushError> {
-    IDSAppleUser::authenticate(
-        connection.clone(),
-        username.trim(),
-        &(password.trim().to_string() + &validation.trim()),
-    )
-    .await
-}
-
+#[derive(Debug)]
 pub enum RegisterError {
     PushError(PushError),
     ValidationDataError(ValidationDataError),
@@ -70,7 +68,7 @@ impl From<ValidationDataError> for RegisterError {
  *
  * This will return a new user
  */
-pub async fn register_user(
+pub async fn register_users(
     users: &mut Vec<IDSUser>,
     connection: Arc<APNSConnection>,
 ) -> Result<(), RegisterError> {

@@ -31,6 +31,7 @@ reqwest = { version = "0.11", features = [
 base64 = "0.21.2"
 log = "0.4.20"
 pyo3 = { version = "0.20.0", features = ["abi3", "serde"] }
+dirs = "5.0.1"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
