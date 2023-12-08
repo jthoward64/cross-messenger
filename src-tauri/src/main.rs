@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use emulated::bindings::ValidationDataError;
+
 pub mod emulated;
 pub mod imessage;
 
@@ -11,8 +13,10 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn get_validation_data() -> Result<String, emulated::bindings::GenerateValidationDataError> {
-    emulated::bindings::generate_validation_data()
+fn get_validation_data() -> Result<Vec<u8>, ValidationDataError> {
+    let retval = emulated::bindings::generate_validation_data();
+    println!("get_validation_data: {:?}", retval);
+    retval
 }
 
 fn main() {

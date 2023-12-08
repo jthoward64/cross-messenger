@@ -1,87 +1,71 @@
-/*
-typedef struct ValidationData
-{
-  // Buffer of 512 bytes
-  char *data;
-  size_t length;
-} ValidationData;
-
-void generate_validation_data_binding(ValidationData *val)
- */
-
-use base64::{engine::general_purpose, Engine as _};
+use pyo3::{prelude::*, prepare_freethreaded_python, types::PyBytes};
 use tauri::InvokeError;
 
-#[repr(C)]
-pub struct ValidationData {
-    data: *mut libc::c_char,
-    length: libc::size_t,
-}
+/*
+requests
+unicorn
+*/
 
-#[link(name = "emulated")]
-extern "C" {
-    fn generate_validation_data_binding(val: *mut ValidationData);
+fn generate_validation_data_py(py: Python) -> PyResult<Py<PyBytes>> {
+    let py_mparser: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/emulated/pypush/mparser.py"
+    ));
+    let py_jelly: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/emulated/pypush/jelly.py"
+    ));
+    let py_nac: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/emulated/pypush/nac.py"
+    ));
+    PyModule::from_code(py, py_mparser, "mparser.py", "mparser")?;
+    PyModule::from_code(py, py_jelly, "jelly.py", "jelly")?;
+    let nac_module = PyModule::from_code(py, py_nac, "", "")?;
+    let generate_validation_data_func = nac_module.getattr("generate_validation_data")?;
+    let generate_validation_data = generate_validation_data_func.call0()?;
+    match generate_validation_data.extract::<Py<PyBytes>>() {
+        Ok(generate_validation_data) => Ok(generate_validation_data),
+        Err(e) => Err(e),
+    }
 }
 
 #[derive(Debug)]
-pub enum GenerateValidationDataError {
-    GenericError,
-    CError,
-    ReturnedNull,
-    ZeroLengthBytes,
+pub enum ValidationDataError {
+    PyErr(PyErr),
 }
 
-impl std::fmt::Display for GenerateValidationDataError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl From<PyErr> for ValidationDataError {
+    fn from(e: PyErr) -> Self {
+        ValidationDataError::PyErr(e)
+    }
+}
+
+impl Into<InvokeError> for ValidationDataError {
+    fn into(self) -> InvokeError {
         match self {
-            GenerateValidationDataError::GenericError => {
-                write!(f, "Generic generate_validation_data() error")
-            }
-            GenerateValidationDataError::CError => {
-                write!(f, "C error in generate_validation_data()")
-            }
-            GenerateValidationDataError::ReturnedNull => {
-                write!(
-                    f,
-                    "Returned null (or similar) from generate_validation_data()"
-                )
-            }
-            GenerateValidationDataError::ZeroLengthBytes => {
-                write!(
-                    f,
-                    "Returned a bytes object with length 0 from generate_validation_data()"
-                )
-            }
+            ValidationDataError::PyErr(e) => InvokeError::from(e.to_string()),
         }
     }
 }
 
-impl std::error::Error for GenerateValidationDataError {}
+pub fn generate_validation_data() -> Result<Vec<u8>, ValidationDataError> {
+    prepare_freethreaded_python();
+    match Python::with_gil(|py| -> PyResult<Vec<u8>> {
+        // Print out some environment information
+        let sys_module = PyModule::import(py, "sys")?;
+        let version_info = sys_module.getattr("version_info")?;
+        let version_info_str = version_info.str()?;
+        println!("Python version: {}", version_info_str);
+        let path = sys_module.getattr("path")?;
+        let path_str = path.str()?;
+        println!("Python path: {}", path_str);
 
-impl Into<InvokeError> for GenerateValidationDataError {
-    fn into(self) -> InvokeError {
-        InvokeError::from(format!("{}", self))
+        let py_validation_data = generate_validation_data_py(py)?;
+        let validation_data = py_validation_data.as_bytes(py).to_vec();
+        Ok(validation_data)
+    }) {
+        Ok(validation_data) => Ok(validation_data),
+        Err(e) => Err(e.into()),
     }
-}
-
-pub fn generate_validation_data() -> Result<String, GenerateValidationDataError> {
-    let mut val = ValidationData {
-        data: std::ptr::null_mut(),
-        length: 0,
-    };
-    unsafe {
-        generate_validation_data_binding(&mut val);
-    }
-    if val.data.is_null() {
-        return Err(GenerateValidationDataError::ReturnedNull);
-    }
-    if val.length == 0 {
-        return Err(GenerateValidationDataError::ZeroLengthBytes);
-    }
-    let bytes = unsafe { std::slice::from_raw_parts(val.data as *const u8, val.length) };
-    let result = general_purpose::STANDARD.encode(bytes);
-    unsafe {
-        libc::free(val.data as *mut libc::c_void);
-    }
-    Ok(result)
 }
