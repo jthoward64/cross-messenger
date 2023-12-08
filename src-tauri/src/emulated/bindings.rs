@@ -1,10 +1,6 @@
+use base64::{engine::general_purpose, Engine};
 use pyo3::{prelude::*, prepare_freethreaded_python, types::PyBytes};
 use tauri::InvokeError;
-
-/*
-requests
-unicorn
-*/
 
 fn generate_validation_data_py(py: Python) -> PyResult<Py<PyBytes>> {
     let py_mparser: &str = include_str!(concat!(
@@ -49,9 +45,9 @@ impl Into<InvokeError> for ValidationDataError {
     }
 }
 
-pub fn generate_validation_data() -> Result<Vec<u8>, ValidationDataError> {
+pub fn generate_validation_data() -> Result<String, ValidationDataError> {
     prepare_freethreaded_python();
-    match Python::with_gil(|py| -> PyResult<Vec<u8>> {
+    let raw_data = match Python::with_gil(|py| -> PyResult<Vec<u8>> {
         // Print out some environment information
         let sys_module = PyModule::import(py, "sys")?;
         let version_info = sys_module.getattr("version_info")?;
@@ -67,5 +63,10 @@ pub fn generate_validation_data() -> Result<Vec<u8>, ValidationDataError> {
     }) {
         Ok(validation_data) => Ok(validation_data),
         Err(e) => Err(e.into()),
+    };
+
+    match raw_data {
+        Ok(raw_data) => Ok(general_purpose::STANDARD.encode(&raw_data)),
+        Err(e) => Err(e),
     }
 }

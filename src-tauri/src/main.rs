@@ -13,7 +13,7 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn get_validation_data() -> Result<Vec<u8>, ValidationDataError> {
+fn get_validation_data() -> Result<String, ValidationDataError> {
     let retval = emulated::bindings::generate_validation_data();
     println!("get_validation_data: {:?}", retval);
     retval
