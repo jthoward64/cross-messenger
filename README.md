@@ -9,3 +9,13 @@ iMessage® is a trademark of Apple Inc., registered in the U.S. and other countr
 ## What is this?
 
 This is a GUI frontend for [rustpush](https://github.com/TaeHagen/rustpush), which is a Rust implementation of the Apple Push Notification Service (APNS) protocol (and iMessage)
+
+## Requirements
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [Node.js](https://nodejs.org/en/download/)
+- [Bun](https://bun.sh)
+- [Python 3](https://www.python.org/downloads/)
+- [pip](https://pip.pypa.io/en/stable/installing/)
+
+To run the project you need Rust and cargo set up. After that you can use `bun install` to install the front-end dependencies. Then make sure you are in a Python environment with the packages `requests` and `unicorn`. Now you can run `cargo tauri dev` to start the project.
