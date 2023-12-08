@@ -3,6 +3,7 @@
 
 use emulated::bindings::ValidationDataError;
 
+pub mod actions;
 pub mod emulated;
 pub mod imessage;
 
