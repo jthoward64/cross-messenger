@@ -475,11 +475,17 @@ dependencies = [
 name = "cross-messenger"
 version = "0.0.1"
 dependencies = [
+ "base64 0.21.5",
+ "log",
+ "openssl",
+ "reqwest",
  "rustpush",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
