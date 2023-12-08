@@ -1,15 +1,26 @@
-import { useState } from "preact/hooks";
-import preactLogo from "./assets/preact.svg";
 import { invoke } from "@tauri-apps/api/tauri";
+import { useState } from "preact/hooks";
 import "./App.css";
+import preactLogo from "./assets/preact.svg";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [name, setName] = useState("");
+  const [data, setData] = useState<any>(undefined);
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
     setGreetMsg(await invoke("greet", { name }));
+  }
+
+  function getData() {
+    invoke("get_validation_data")
+      .then((res) => {
+        setData(res);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   }
 
   return (
@@ -44,6 +55,10 @@ function App() {
         />
         <button type="submit">Greet</button>
       </form>
+
+      <button onClick={getData}>Get Data</button>
+
+      <p>{JSON.stringify(data)}</p>
 
       <p>{greetMsg}</p>
     </div>

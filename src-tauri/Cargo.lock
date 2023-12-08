@@ -476,6 +476,8 @@ name = "cross-messenger"
 version = "0.0.1"
 dependencies = [
  "base64 0.21.5",
+ "cc",
+ "libc",
  "log",
  "openssl",
  "reqwest",
