@@ -1,28 +1,26 @@
 /*
 typedef struct ValidationData
 {
+  // Buffer of 512 bytes
   char *data;
   size_t length;
-  bool is_valid;
 } ValidationData;
 
-ValidationData *generate_validation_data_binding()
+void generate_validation_data_binding(ValidationData *val)
  */
 
-use std::ffi::c_char;
-
+use base64::{engine::general_purpose, Engine as _};
 use tauri::InvokeError;
 
 #[repr(C)]
-#[derive(Debug)]
 pub struct ValidationData {
-    data: *mut c_char,
-    length: usize,
+    data: *mut libc::c_char,
+    length: libc::size_t,
 }
 
 #[link(name = "emulated")]
 extern "C" {
-    fn generate_validation_data_binding() -> ValidationData;
+    fn generate_validation_data_binding(val: *mut ValidationData);
 }
 
 #[derive(Debug)]
@@ -66,14 +64,24 @@ impl Into<InvokeError> for GenerateValidationDataError {
     }
 }
 
-pub fn generate_validation_data() -> Result<Vec<c_char>, GenerateValidationDataError> {
-    let validation_data = unsafe { generate_validation_data_binding() };
-    if validation_data.data.is_null() {
+pub fn generate_validation_data() -> Result<String, GenerateValidationDataError> {
+    let mut val = ValidationData {
+        data: std::ptr::null_mut(),
+        length: 0,
+    };
+    unsafe {
+        generate_validation_data_binding(&mut val);
+    }
+    if val.data.is_null() {
         return Err(GenerateValidationDataError::ReturnedNull);
     }
-    if validation_data.length == 0 {
+    if val.length == 0 {
         return Err(GenerateValidationDataError::ZeroLengthBytes);
     }
-    let data = unsafe { std::slice::from_raw_parts(validation_data.data, validation_data.length) };
-    Ok(data.to_vec())
+    let bytes = unsafe { std::slice::from_raw_parts(val.data as *const u8, val.length) };
+    let result = general_purpose::STANDARD.encode(bytes);
+    unsafe {
+        libc::free(val.data as *mut libc::c_void);
+    }
+    Ok(result)
 }

@@ -1,7 +1,9 @@
-#define MACRO_PLIST_PATH "src-tauri/src/emulated/data.plist"
-#define MACRO_BINARY_PATH "src-tauri/src/emulated/IMDAppleServices"
+#define MACRO_PLIST_PATH "emulated/data.plist"
+#define MACRO_BINARY_PATH "IMDAppleServices"
 
+#include <Python.h>
 #include "nac.c"
+#include <stdio.h>
 
 typedef struct ValidationData
 {
@@ -9,34 +11,28 @@ typedef struct ValidationData
   size_t length;
 } ValidationData;
 
-ValidationData generate_validation_data_binding()
+void generate_validation_data_binding(ValidationData *validationDataPtr)
 {
+  PyGILState_STATE state = PyGILState_Ensure();
+  // Set the working directory to the directory of the executable
+  // so that the Python interpreter can find the data files
+  Py_SetPath(L"src-tauri/src/emulated");
+
   PyObject *validationData = __pyx_pf_3nac_68generate_validation_data(NULL);
 
-  if (validationData == NULL)
+  if (validationData != NULL && PyBytes_Check(validationData) && !PyErr_Occurred())
   {
-    return (ValidationData){NULL, 0};
-  }
+    size_t length = PyBytes_Size(validationData);
+    validationDataPtr->data = calloc(length, sizeof(char));
 
-  if (!PyBytes_Check(validationData))
+    validationDataPtr->length = length;
+    memcpy(validationDataPtr->data, PyBytes_AsString(validationData), length);
+  }
+  else
   {
-    Py_DECREF(validationData);
-    return (ValidationData){NULL, 0};
+    printf("Error generating validation data\n");
   }
-
-  if (PyErr_Occurred())
-  {
-    Py_DECREF(validationData);
-    return (ValidationData){NULL, 0};
-  }
-
-  size_t length = PyBytes_Size(validationData);
-
-  char *data = calloc(length, sizeof(char));
-
-  memcpy(data, PyBytes_AsString(validationData), length);
 
   Py_DECREF(validationData);
-
-  return (ValidationData){data, length};
+  PyGILState_Release(state);
 }
