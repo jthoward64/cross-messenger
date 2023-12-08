@@ -1,9 +1,9 @@
 [package]
-name = "imessage-app"
-version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
+name = "cross-messenger"
+version = "0.0.1"
+description = "A Tauri GUI for iMessage"
+authors = ["Tag Howard"]
+license = "MIT"
 repository = ""
 edition = "2021"
 
@@ -16,6 +16,8 @@ tauri-build = { version = "1.5", features = [] }
 tauri = { version = "1.5", features = ["shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# rustpush does not have a published crate yet, so we use a relative path
+rustpush = { path = "../../rustpush" }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
