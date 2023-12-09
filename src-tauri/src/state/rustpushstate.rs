@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use dirs::{data_local_dir, home_dir};
-use rustpush::{init_logger, APNSConnection, APNSState, IDSUser, IMClient};
+use rustpush::{APNSConnection, APNSState, IDSUser, IMClient};
 use serde::{Deserialize, Serialize};
 use tauri::InvokeError;
-use tokio::sync::Mutex;
 
 use crate::{
     emulated::bindings::ValidationDataError,
@@ -32,9 +31,7 @@ pub fn retrieve_saved_state() -> Option<SavedState> {
 
 pub struct RustPushState {
     pub apns_connection: Arc<APNSConnection>,
-    pub users: Arc<Mutex<Vec<IDSUser>>>,
-    pub active_handle: Arc<Option<String>>,
-    client: Arc<Option<IMClient>>,
+    pub client: Arc<IMClient>,
 }
 
 #[derive(Debug)]
@@ -43,6 +40,8 @@ pub enum IMClientError {
     NoClient,
     PushError(rustpush::PushError),
     ValidationDataError(ValidationDataError),
+    RegisterError(RegisterError),
+    IOError(std::io::Error),
 }
 
 impl From<rustpush::PushError> for IMClientError {
@@ -62,15 +61,18 @@ impl Into<InvokeError> for IMClientError {
             IMClientError::NoClient => InvokeError::from("No client configured"),
             IMClientError::PushError(error) => InvokeError::from(error.to_string()),
             IMClientError::ValidationDataError(error) => error.into(),
+            IMClientError::RegisterError(error) => match error {
+                RegisterError::PushError(error) => InvokeError::from(error.to_string()),
+                RegisterError::ValidationDataError(error) => error.into(),
+            },
+            IMClientError::IOError(error) => InvokeError::from(error.to_string()),
         }
     }
 }
 
 impl RustPushState {
     pub async fn new(saved_state: Option<SavedState>) -> Result<RustPushState, IMClientError> {
-        init_logger();
-
-        let (apns_connection, users) = match saved_state {
+        let (apns_connection, mut users) = match saved_state {
             Some(saved_state) => {
                 let apns_connection = Arc::new(APNSConnection::new(Some(saved_state.push)).await?);
                 let users = saved_state.users;
@@ -83,12 +85,24 @@ impl RustPushState {
             }
         };
 
-        let active_handle = None;
-        let client = None;
+        let mut needs_reregistration = false;
+        for user in users.iter() {
+            println!("Checking user {:?}", user.user_id);
+            if user.identity.is_none() {
+                println!("User {:?} has no identity", user.user_id);
+                needs_reregistration = true;
+            }
+        }
+        if needs_reregistration {
+            register_users(&mut users, apns_connection.clone())
+                .await
+                .unwrap();
+        }
+
+        let client = IMClient::new(apns_connection.clone(), Arc::new(users)).await;
+
         let application_state = RustPushState {
             apns_connection,
-            users: Arc::new(Mutex::new(users)),
-            active_handle: Arc::new(active_handle),
             client: Arc::new(client),
         };
         if let Err(e) = application_state.save_to_file().await {
@@ -100,7 +114,7 @@ impl RustPushState {
     pub async fn to_saved_state(&self) -> SavedState {
         SavedState {
             push: self.apns_connection.state.clone(),
-            users: self.users.lock().await.to_owned(),
+            users: self.client.users.to_vec(),
         }
     }
 
@@ -117,7 +131,7 @@ impl RustPushState {
     }
 
     pub async fn get_user_by_handle(&self, handle: &str) -> Option<IDSUser> {
-        let users = self.users.lock().await;
+        let users = self.client.users.clone();
         users
             .iter()
             .find(|user| user.handles.contains(&handle.to_owned()))
@@ -125,50 +139,47 @@ impl RustPushState {
     }
 
     pub async fn get_user_by_id(&self, id: &str) -> Option<IDSUser> {
-        let users = self.users.lock().await;
+        let users = self.client.users.clone();
         users.iter().find(|user| user.user_id == id).cloned()
     }
 
-    pub async fn update_users(&mut self) -> Result<(), IMClientError> {
-        self.client = Arc::new(None);
-        let mut users = self.users.lock().await;
-        if users.len() != 0 {
-            println!("Updating users {:?}", users.len());
-            match register_users(users.as_mut(), self.apns_connection.clone()).await {
-                Ok(_) => {
-                    self.active_handle =
-                        Arc::new(users.first().map(|user| user.handles[0].clone()));
-                    if let Err(e) = self.save_to_file().await {
-                        println!("Error saving state: {:?}", e);
-                    }
-                    Ok(())
+    // pub async fn update_users(&mut self) -> Result<(), IMClientError> {
+    //     let mut users = self.users.write().await;
+    //     if users.len() != 0 {
+    //         println!("Updating users {:?}", users.len());
+    //         match register_users(users.as_mut(), self.apns_connection.clone()).await {
+    //             Ok(_) => {
+    //                 if let Err(e) = self.save_to_file().await {
+    //                     println!("Error saving state: {:?}", e);
+    //                 }
+    //                 Ok(())
+    //             }
+    //             Err(RegisterError::PushError(error)) => return Err(error.into()),
+    //             Err(RegisterError::ValidationDataError(error)) => return Err(error.into()),
+    //         }
+    //     } else {
+    //         Ok(())
+    //     }
+    // }
+
+    pub async fn add_user(&mut self, user: IDSUser) -> Result<(), IMClientError> {
+        let mut users: Vec<IDSUser> = self.client.users.to_vec();
+        users.push(user.clone());
+
+        match register_users(&mut users, self.apns_connection.clone()).await {
+            Ok(_) => {
+                self.client =
+                    Arc::new(IMClient::new(self.apns_connection.clone(), Arc::new(users)).await);
+                match self.save_to_file().await {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(IMClientError::IOError(e)),
+                }?;
+                if let Err(e) = self.save_to_file().await {
+                    println!("Error saving state: {:?}", e);
                 }
-                Err(RegisterError::PushError(error)) => return Err(error.into()),
-                Err(RegisterError::ValidationDataError(error)) => return Err(error.into()),
+                Ok(())
             }
-        } else {
-            Ok(())
-        }
-    }
-
-    async fn ensure_client(&mut self) -> Result<(), IMClientError> {
-        if self.client.is_none() {
-            let users = self.users.lock().await;
-            let client =
-                IMClient::new(self.apns_connection.clone(), Arc::new(users.to_owned())).await;
-            self.client = Arc::new(Some(client));
-            if let Err(e) = self.save_to_file().await {
-                println!("Error saving state: {:?}", e);
-            }
-        }
-        Ok(())
-    }
-
-    pub async fn get_client(&mut self) -> Result<&IMClient, IMClientError> {
-        self.ensure_client().await?;
-        match self.client.as_ref() {
-            Some(client) => Ok(client),
-            None => Err(IMClientError::NoClient),
+            Err(error) => return Err(IMClientError::RegisterError(error)),
         }
     }
 }

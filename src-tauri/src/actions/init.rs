@@ -14,8 +14,9 @@ pub async fn do_login(
     password: String,
     code: Option<String>,
 ) -> Result<bool, IMClientError> {
+    let mut state = state.lock().await;
     match login(
-        state.lock().await.apns_connection.to_owned(),
+        state.apns_connection.to_owned(),
         &username,
         &password,
         code.as_deref(),
@@ -24,9 +25,7 @@ pub async fn do_login(
     {
         Ok(user) => {
             println!("Logged in as {:?}", user.user_id);
-            state.lock().await.users.lock().await.push(user);
-            println!("Updating users");
-            state.lock().await.update_users().await?;
+            state.add_user(user).await?;
             println!("Updated users");
             Ok(true)
         }

@@ -29,18 +29,6 @@ fn get_validation_data() -> Result<String, ValidationDataError> {
 #[tokio::main]
 async fn main() {
     let tauri_state = TauriState::new().await.unwrap();
-    if let Err(error) = tauri_state
-        .0
-        .lock()
-        .await
-        .rust_push
-        .lock()
-        .await
-        .update_users()
-        .await
-    {
-        println!("Error updating users: {:?}", error);
-    }
 
     tauri::Builder::default()
         .manage(tauri_state)

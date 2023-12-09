@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rustpush::{ConversationData, IMClient, Message, PushError};
 
 /**
@@ -6,7 +8,7 @@ use rustpush::{ConversationData, IMClient, Message, PushError};
  * This will return the message ID
  */
 pub async fn send_text_message(
-    client: &IMClient,
+    client: Arc<IMClient>,
     conversation: ConversationData,
     message: Message,
 ) -> Result<String, PushError> {
@@ -18,6 +20,7 @@ pub async fn send_text_message(
         println!("Sent message: {:?}", msg.to_string());
         Ok(msg.id)
     } else {
+        println!("No handles found");
         // TODO: Return a proper error
         Err(PushError::TwoFaError)
     }
