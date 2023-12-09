@@ -6,7 +6,7 @@ use rustpush::{ConversationData, IMClient, Message, PushError};
  * This will return the message ID
  */
 pub async fn send_text_message(
-    client: &mut IMClient,
+    client: &IMClient,
     conversation: ConversationData,
     handle: &str,
     message: Message,

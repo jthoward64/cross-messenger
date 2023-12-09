@@ -1,13 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::actions::init::authenticate;
-use std::sync::Arc;
+use crate::actions::{init::authenticate, send::send_message};
 
 use emulated::bindings::ValidationDataError;
-use rustpush::APNSConnection;
 use state::ApplicationState;
-use tokio::sync::Mutex;
 
 pub mod actions;
 pub mod emulated;
@@ -31,23 +28,8 @@ fn get_validation_data() -> Result<String, ValidationDataError> {
 async fn main() {
     let saved_state = state::retrieve_saved_state();
 
-    let apns_connection = Arc::new(
-        APNSConnection::new(saved_state.as_ref().map(|state| state.push.clone()))
-            .await
-            .unwrap(),
-    );
-
-    let users = if let Some(state) = saved_state.as_ref() {
-        state.users.clone()
-    } else {
-        Vec::new()
-    };
-
-    let app_state = ApplicationState {
-        apns_connection,
-        users: Mutex::new(users),
-    };
-    if let Err(error) = app_state.update_users().await {
+    let app_state = ApplicationState::new(saved_state).await.unwrap();
+    if let Err(error) = app_state.lock().await.update_users().await {
         println!("Error updating users: {:?}", error);
     }
 
@@ -56,7 +38,8 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_validation_data,
-            authenticate
+            authenticate,
+            send_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
