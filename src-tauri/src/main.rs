@@ -1,12 +1,14 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::actions::{init::authenticate, send::send_message};
+use crate::commands::authenticate;
+use crate::commands::send_message;
 
 use emulated::bindings::ValidationDataError;
-use state::ApplicationState;
+use state::TauriState;
 
 pub mod actions;
+pub mod commands;
 pub mod emulated;
 pub mod imessage;
 pub mod state;
@@ -26,15 +28,22 @@ fn get_validation_data() -> Result<String, ValidationDataError> {
 
 #[tokio::main]
 async fn main() {
-    let saved_state = state::retrieve_saved_state();
-
-    let app_state = ApplicationState::new(saved_state).await.unwrap();
-    if let Err(error) = app_state.lock().await.update_users().await {
+    let tauri_state = TauriState::new().await.unwrap();
+    if let Err(error) = tauri_state
+        .0
+        .lock()
+        .await
+        .rust_push
+        .lock()
+        .await
+        .update_users()
+        .await
+    {
         println!("Error updating users: {:?}", error);
     }
 
     tauri::Builder::default()
-        .manage(app_state)
+        .manage(tauri_state)
         .invoke_handler(tauri::generate_handler![
             greet,
             get_validation_data,

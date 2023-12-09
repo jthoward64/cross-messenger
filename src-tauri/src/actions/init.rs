@@ -1,20 +1,21 @@
+use std::sync::Arc;
+
 use rustpush::PushError;
-use tauri::InvokeError;
+use tokio::sync::Mutex;
 
 use crate::{
     imessage::user::{login, LoginError},
-    state::ApplicationState,
+    state::rustpushstate::{IMClientError, RustPushState},
 };
 
-#[tauri::command]
-pub async fn authenticate(
-    state: tauri::State<'_, ApplicationState>,
+pub async fn do_login(
+    state: Arc<Mutex<RustPushState>>,
     username: String,
     password: String,
     code: Option<String>,
-) -> Result<bool, InvokeError> {
+) -> Result<bool, IMClientError> {
     match login(
-        state.apns_connection.to_owned(),
+        state.lock().await.apns_connection.to_owned(),
         &username,
         &password,
         code.as_deref(),
@@ -22,10 +23,22 @@ pub async fn authenticate(
     .await
     {
         Ok(user) => {
-            state.users.lock().await.push(user);
+            println!("Logged in as {:?}", user.user_id);
+            state.lock().await.users.lock().await.push(user);
+            println!("Updating users");
+            state.lock().await.update_users().await?;
+            println!("Updated users");
             Ok(true)
         }
-        Err(LoginError::PushError(PushError::TwoFaError)) => Ok(false),
-        Err(e) => Err(e.into()),
+        Err(LoginError::PushError(PushError::TwoFaError)) => {
+            println!("2FA required");
+            Ok(false)
+        }
+        Err(e) => match e {
+            LoginError::PushError(error) => {
+                println!("Error logging in: {:?}", error);
+                Err(IMClientError::PushError(error))
+            }
+        },
     }
 }
