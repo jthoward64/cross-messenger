@@ -73,6 +73,9 @@ pub async fn register_users(
     connection: Arc<APNSConnection>,
 ) -> Result<(), RegisterError> {
     let validation = generate_validation_data()?;
+    for user in users.to_vec().iter_mut() {
+        println!("Registering user {:#?}", user.handles);
+    }
     match register(validation.as_str(), users, connection).await {
         Ok(_) => Ok(()),
         Err(e) => Err(e.into()),

@@ -479,6 +479,7 @@ dependencies = [
  "dirs",
  "log",
  "openssl",
+ "plist",
  "pyo3",
  "reqwest",
  "rustpush",

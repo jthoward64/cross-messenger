@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use dirs::{data_local_dir, home_dir};
 use rustpush::{APNSConnection, APNSState, IDSUser, IMClient};
@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::InvokeError;
 
 use crate::{
+    dataplist::parse_plist,
     emulated::bindings::ValidationDataError,
     imessage::user::{register_users, RegisterError},
 };
@@ -42,6 +43,7 @@ pub enum IMClientError {
     ValidationDataError(ValidationDataError),
     RegisterError(RegisterError),
     IOError(std::io::Error),
+    PlistError(plist::Error),
 }
 
 impl From<rustpush::PushError> for IMClientError {
@@ -66,20 +68,40 @@ impl Into<InvokeError> for IMClientError {
                 RegisterError::ValidationDataError(error) => error.into(),
             },
             IMClientError::IOError(error) => InvokeError::from(error.to_string()),
+            IMClientError::PlistError(error) => InvokeError::from(error.to_string()),
         }
     }
 }
 
 impl RustPushState {
     pub async fn new(saved_state: Option<SavedState>) -> Result<RustPushState, IMClientError> {
+        let data_plist = parse_plist(&Path::new("src/emulated/pypush/data.plist"));
+        if let Err(e) = data_plist {
+            return match e {
+                crate::dataplist::PlistError::IOError(error) => Err(IMClientError::IOError(error)),
+                crate::dataplist::PlistError::PlistError(error) => {
+                    Err(IMClientError::PlistError(error))
+                }
+            };
+        }
+
         let (apns_connection, mut users) = match saved_state {
             Some(saved_state) => {
-                let apns_connection = Arc::new(APNSConnection::new(Some(saved_state.push)).await?);
+                let apns_connection = Arc::new(
+                    APNSConnection::new(
+                        &data_plist.unwrap().iokit.ioplatformserialnumber,
+                        Some(saved_state.push),
+                    )
+                    .await?,
+                );
                 let users = saved_state.users;
                 (apns_connection, users)
             }
             None => {
-                let apns_connection = Arc::new(APNSConnection::new(None).await?);
+                let apns_connection = Arc::new(
+                    APNSConnection::new(&data_plist.unwrap().iokit.ioplatformserialnumber, None)
+                        .await?,
+                );
                 let users: Vec<IDSUser> = Vec::new();
                 (apns_connection, users)
             }
@@ -164,7 +186,10 @@ impl RustPushState {
 
     pub async fn add_user(&mut self, user: IDSUser) -> Result<(), IMClientError> {
         let mut users: Vec<IDSUser> = self.client.users.to_vec();
-        users.push(user.clone());
+
+        if user.handles.len() > 0 {
+            users.push(user.clone());
+        }
 
         match register_users(&mut users, self.apns_connection.clone()).await {
             Ok(_) => {

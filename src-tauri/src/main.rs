@@ -9,6 +9,7 @@ use state::TauriState;
 
 pub mod actions;
 pub mod commands;
+pub mod dataplist;
 pub mod emulated;
 pub mod imessage;
 pub mod state;
