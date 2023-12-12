@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rustpush::{ConversationData, Message, NormalMessage};
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 

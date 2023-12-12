@@ -12,6 +12,7 @@ pub mod commands;
 pub mod dataplist;
 pub mod emulated;
 pub mod imessage;
+pub mod ipc;
 pub mod state;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command

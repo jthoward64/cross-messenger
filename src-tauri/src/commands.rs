@@ -1,4 +1,4 @@
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 
 use crate::{
     actions::init::do_login,

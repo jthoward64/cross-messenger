@@ -3,7 +3,7 @@ use std::{path::Path, sync::Arc};
 use dirs::{data_local_dir, home_dir};
 use rustpush::{APNSConnection, APNSState, IDSUser, IMClient};
 use serde::{Deserialize, Serialize};
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 
 use crate::{
     dataplist::parse_plist,

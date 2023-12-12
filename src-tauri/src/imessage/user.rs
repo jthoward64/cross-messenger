@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rustpush::{register, APNSConnection, IDSAppleUser, IDSUser, PushError};
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 
 use crate::emulated::bindings::{generate_validation_data, ValidationDataError};
 

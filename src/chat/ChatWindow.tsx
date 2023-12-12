@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/primitives";
 import { useState } from "preact/hooks";
 
 function sendMessage(message: string, to: string) {

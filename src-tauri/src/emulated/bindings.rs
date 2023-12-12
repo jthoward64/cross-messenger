@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose, Engine};
 use pyo3::{prelude::*, prepare_freethreaded_python, types::PyBytes};
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 
 fn generate_validation_data_py(py: Python) -> PyResult<Py<PyBytes>> {
     let py_mparser: &str = include_str!(concat!(
