@@ -10,7 +10,8 @@ pub struct ApplicationState {
     pub rust_push: Arc<Mutex<rustpushstate::RustPushState>>,
 }
 
-pub struct TauriState(pub Mutex<ApplicationState>);
+#[derive(Clone)]
+pub struct TauriState(pub Arc<Mutex<ApplicationState>>);
 
 impl TauriState {
     pub async fn new() -> Result<Self, IMClientError> {
@@ -18,6 +19,6 @@ impl TauriState {
             rustpushstate::RustPushState::new(rustpushstate::retrieve_saved_state()).await?,
         ));
         let state = ApplicationState { rust_push };
-        Ok(Self(Mutex::new(state)))
+        Ok(Self(Arc::new(Mutex::new(state))))
     }
 }

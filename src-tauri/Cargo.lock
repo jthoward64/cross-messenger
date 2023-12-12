@@ -805,6 +805,7 @@ checksum = "7059fff8937831a9ae6f0fe4d658ffabf58f2ca96aa9dec1c889f936f705f216"
 name = "cross-messenger"
 version = "0.0.1"
 dependencies = [
+ "async-trait",
  "base64",
  "dirs",
  "log",
