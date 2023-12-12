@@ -1,0 +1,29 @@
+interface ipc {
+  func login(username: string, password: string, code: option<string>) -> option<loginErrorCode>
+  func logout() -> option<logoutErrorCode>
+  func getUser() -> result<user, getUserErrorCode>
+  func selectHandle(handle: string) -> option<selectHandleErrorCode>
+  enum loginErrorCode {
+    twoFactorRequired,
+    loginFailed,
+    unknown,
+  }
+  enum logoutErrorCode {
+    notLoggedIn,
+    unknown,
+  }
+  enum getUserErrorCode {
+    notLoggedIn,
+    unknown,
+  }
+  enum selectHandleErrorCode {
+    notLoggedIn,
+    handleNotFound,
+    unknown,
+  }
+  record user {
+    userId: string,
+    handles: list<string>,
+    selectedHandle: string,
+  }
+}
