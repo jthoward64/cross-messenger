@@ -33,6 +33,7 @@ pub fn retrieve_saved_state() -> Option<SavedState> {
 pub struct RustPushState {
     pub apns_connection: Arc<APNSConnection>,
     pub client: Arc<IMClient>,
+    pub active_handle: Option<String>,
 }
 
 #[derive(Debug)]
@@ -126,6 +127,7 @@ impl RustPushState {
         let application_state = RustPushState {
             apns_connection,
             client: Arc::new(client),
+            active_handle: None,
         };
         if let Err(e) = application_state.save_to_file().await {
             println!("Error saving state: {:?}", e);
@@ -205,6 +207,25 @@ impl RustPushState {
                 Ok(())
             }
             Err(error) => return Err(IMClientError::RegisterError(error)),
+        }
+    }
+
+    pub async fn get_active_user(&mut self) -> Option<(IDSUser, String)> {
+        match &self.active_handle {
+            Some(handle) => match self.get_user_by_handle(handle).await {
+                Some(user) => Some((user, handle.to_string())),
+                None => None,
+            },
+            None => match self.client.users.first() {
+                Some(user) => match &user.handles.first() {
+                    Some(handle) => {
+                        self.active_handle = Some(handle.to_string());
+                        Some((user.clone(), handle.to_string()))
+                    }
+                    None => None,
+                },
+                None => None,
+            },
         }
     }
 }

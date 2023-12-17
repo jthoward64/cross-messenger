@@ -78,4 +78,33 @@ impl ipc::Ipc for IpcCtx {
     async fn logout(&self) -> Option<LogoutErrorCode> {
         Some(LogoutErrorCode::Unknown)
     }
+
+    async fn get_user(&self) -> Result<Option<User>, GetUserErrorCode> {
+        let app_state = self.tauri_state.0.lock().await;
+        let mut state = app_state.rust_push.lock().await;
+        if state.client.users.len() == 0 {
+            return Err(GetUserErrorCode::NotLoggedIn);
+        } else {
+            match state.get_active_user().await {
+                Some((user, handle)) => Ok(Some(User {
+                    handles: user.handles.clone(),
+                    selected_handle: handle,
+                    user_id: user.user_id.clone(),
+                })),
+                None => Ok(None),
+            }
+        }
+    }
+
+    async fn select_handle(&self, handle: String) -> Option<SelectHandleErrorCode> {
+        let app_state = self.tauri_state.0.lock().await;
+        let mut state = app_state.rust_push.lock().await;
+        match state.get_user_by_handle(&handle).await {
+            Some(_) => {
+                state.active_handle = Some(handle);
+                None
+            }
+            None => Some(SelectHandleErrorCode::HandleNotFound),
+        }
+    }
 }

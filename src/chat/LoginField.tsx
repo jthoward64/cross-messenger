@@ -1,35 +1,37 @@
-import { invoke } from "@tauri-apps/api/primitives";
-import { useState } from "preact/hooks";
-
-async function login(
-  username: string,
-  password: string,
-  twoFactorCode?: string
-) {
-  invoke("authenticate", {
-    username,
-    password,
-    code: twoFactorCode || undefined,
-  })
-    .then((res) => {
-      console.log(res);
-    })
-    .catch((err) => {
-      console.error(err);
-    });
-}
+import { useEffect, useState } from "preact/hooks";
+import { getUser, login } from "../ipc";
 
 export function LoginField() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
 
+  const [selectedHandle, setSelectedHandle] = useState("");
+
+  useEffect(() => {
+    setInterval(() => {
+      getUser()
+        .then((user) => {
+          if (user.tag === "ok") {
+            setSelectedHandle(user.val?.selectedHandle ?? "");
+          } else {
+            console.error(user.val);
+            setSelectedHandle("");
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setSelectedHandle("");
+        });
+    }, 1000);
+  }, []);
+
   return (
     <form
       class="row"
       onSubmit={(e) => {
         e.preventDefault();
-        login(username, password, twoFactorCode);
+        login(username, password, twoFactorCode || null);
       }}
     >
       <input
@@ -48,6 +50,9 @@ export function LoginField() {
         placeholder="Enter a two-factor code..."
       />
       <button type="submit">Login</button>
+      <p>
+        {selectedHandle ? `Logged in as ${selectedHandle}` : "Not logged in"}
+      </p>
     </form>
   );
 }

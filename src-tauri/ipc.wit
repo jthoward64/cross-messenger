@@ -1,7 +1,7 @@
 interface ipc {
   func login(username: string, password: string, code: option<string>) -> option<loginErrorCode>
   func logout() -> option<logoutErrorCode>
-  func getUser() -> result<user, getUserErrorCode>
+  func getUser() -> result<option<user>, getUserErrorCode>
   func selectHandle(handle: string) -> option<selectHandleErrorCode>
   enum loginErrorCode {
     twoFactorRequired,

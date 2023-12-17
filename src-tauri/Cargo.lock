@@ -2070,6 +2070,7 @@ dependencies = [
 [[package]]
 name = "ipc-router-wip"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "anyhow",
  "futures-util",
@@ -3562,6 +3563,7 @@ checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
 [[package]]
 name = "rust-macro-shared"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3646,6 +3648,7 @@ dependencies = [
 [[package]]
 name = "rustpush"
 version = "0.1.0"
+source = "git+https://github.com/jthoward64/rustpush.git#66962dcfbd0bac3aed5cb539987a84ea673ab6d2"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4410,6 +4413,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-core"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "bitflags 2.4.1",
  "log",
@@ -4420,6 +4424,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-gen-guest-ts"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "heck",
  "tauri-bindgen-core",
@@ -4430,6 +4435,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-gen-host"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "clap",
  "heck",
@@ -4445,6 +4451,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-gen-js"
 version = "0.1.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "bitflags 2.4.1",
  "heck",
@@ -4456,6 +4463,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-gen-rust"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "heck",
  "log",
@@ -4469,6 +4477,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-host"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4484,6 +4493,7 @@ dependencies = [
 [[package]]
 name = "tauri-bindgen-host-macro"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "proc-macro2",
  "rust-macro-shared",
@@ -5783,6 +5793,7 @@ dependencies = [
 [[package]]
 name = "wit-parser"
 version = "0.2.0"
+source = "git+https://github.com/tauri-apps/tauri-bindgen.git#1ae5e2abd63b81e76e81287674159b0636242673"
 dependencies = [
  "distance",
  "id-arena",

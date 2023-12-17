@@ -10,16 +10,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
-tauri-bindgen-gen-guest-ts = { version = "0.2.0", path = "../../tauri-bindgen/crates/gen-guest-ts" }
+tauri-bindgen-gen-guest-ts = { git = "https://github.com/tauri-apps/tauri-bindgen.git" }
 
+tauri-build = { version = "1.5", features = [] }
 [dependencies]
 tauri = { version = "2.0.0-alpha", features = [] }
-tauri-bindgen-host = { version = "0.2.0", path = "../../tauri-bindgen/crates/host" }
+tauri-bindgen-host = { git = "https://github.com/tauri-apps/tauri-bindgen.git" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # rustpush does not have a published crate yet, so we use a relative path
-rustpush = { path = "../../rustpush" }
+rustpush = { git = "https://github.com/jthoward64/rustpush.git" }
 openssl = { version = "0.10.56", features = ["vendored"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "1.4.1", features = ["v4"] }
